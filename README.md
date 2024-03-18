@@ -17,8 +17,6 @@ curl: (7) Failed to connect to serverb.lab.example.com port 1001: No route to ho
 
 Let's see why we can connect via either port 80 or port 1001 on serverb.  SSH to serverb and raise your privelage to root via sudo -i
 
-Let
-
 First let's check if httpd is active.
 ```
 # systemctl is-active httpd
@@ -188,8 +186,65 @@ $ curl http://serverb.lab.example.com:1001
 curl: (7) Failed to connect to serverb.lab.example.com port 1001: No route to host
 ```
 
-Port 1001 is stil an issue.  Let's check the firewall
+Port 1001 is stil an issue.  Let's check the firewall.  First we will see what the default-zone is set to...
+```
+# firewall-cmd --get-default-zone
+public
+```
 
+All good here.  Let's check active ports
+```
+# firewall-cmd --zone=public --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: eth0
+  sources: 
+  services: cockpit dhcpv6-client http ssh
+  ports: 
+  protocols: 
+  forward: yes
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules:
+```
+
+Notice 1001 is missing from the ports section.  Let's add port 1001 to the firewall configuration
+```
+# firewall-cmd --zone=public --permanent --add-port=1001/tcp
+success
+```
+Let's reload the firewall and the check the settings
+```
+# firewall-cmd --reload
+success
+# firewall-cmd --zone=public --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: eth0
+  sources: 
+  services: cockpit dhcpv6-client http ssh
+  ports: 1001/tcp
+  protocols: 
+  forward: yes
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+```
+
+We should be good to go.  Let's see if we can acces both ports 80 and 1001 now.
+```
+$ curl http://serverb.lab.example.com/
+SERVER B
+$ curl http://serverb.lab.example.com:1001
+VHOST 1
+```
+All good.
 
 
 
